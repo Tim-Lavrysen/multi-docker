@@ -1,0 +1,33 @@
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t timlavrysen/react-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run -e CI=true timlavrysen/react-test npm run test -- --coverage
+
+after_success
+  - docker build -t timlavrysen/multi-client ./client
+  - docker build -t timlavrysen/multi-nginx ./nginx
+  - docker build -t timlavrysen/multi-api ./api
+  - docker build -t timlavrysen/multi-worker ./worker
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  - docker push timlavrysen/multi-client
+  - docker push timlavrysen/multi-nginx
+  - docker push timlavrysen/multi-api
+  - docker push timlavrysen/multi-worker
+  
+deploy:
+  provider: elasticbeanstalk
+  region: "us-east-2"
+  name: "docker-test"
+  env: "DockerTest-env"
+  bucket_name: "elasticbeanstalk-us-east-2-442656431382"
+  bucket_path: "docker-test"
+  on:
+    branch: master
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key: 
+    secure: "$AWS_SECRET_KEY"Tims-MBP:single-service-deployment tim$ 
